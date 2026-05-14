@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marketing Masters — Product Life Cycle Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ============================================================
+       LANDING / LOBBY VIEW
+       ============================================================ -->
+  <section id="view-landing" class="view active">
+    <div class="hero">
+      <h1 class="logo">MARKETING<br/><span>MASTERS</span></h1>
+      <p class="tagline">The Product Life Cycle game-show showdown.</p>
+
+      <div class="lobby-buttons">
+        <button id="btn-host" class="big-btn pink">
+          <span class="btn-icon">🎤</span>
+          <span class="btn-label">HOST<small>(Teacher)</small></span>
+        </button>
+        <button id="btn-join" class="big-btn blue">
+          <span class="btn-icon">🎮</span>
+          <span class="btn-label">JOIN<small>(Group)</small></span>
+        </button>
+      </div>
+
+      <div id="join-form" class="join-form hidden">
+        <input id="input-room-code" type="text" maxlength="4" placeholder="ROOM CODE" autocomplete="off" />
+        <input id="input-group-name" type="text" maxlength="20" placeholder="Your group name" autocomplete="off" />
+        <button id="btn-join-room" class="big-btn yellow">JOIN GAME →</button>
+        <p id="join-error" class="error hidden"></p>
+      </div>
+
+      <p class="footer-note">Built for Business class · Marketing Mix &amp; PLC revision</p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       TEACHER / HOST VIEW
+       ============================================================ -->
+  <section id="view-teacher" class="view">
+    <header class="bar">
+      <h2>TEACHER DASHBOARD</h2>
+      <div class="room-code-display">
+        ROOM CODE: <span id="teacher-room-code">----</span>
+      </div>
+
+      <!-- Music player -->
+      <div class="music-player">
+        <select id="music-select" title="Background music">
+          <option value="">🎵 Music: Off</option>
+          <option value="upbeat-fun">Upbeat Fun</option>
+          <option value="cartoon-funny">Cartoon Funny</option>
+          <option value="minecraft-gaming">Gaming (Minecraft style)</option>
+          <option value="cartoon-animation">Cartoon Animation</option>
+          <option value="cheerful-playful">Cheerful Playful</option>
+        </select>
+        <input id="music-volume" type="range" min="0" max="100" value="40" title="Music volume" />
+      </div>
+
+      <button id="btn-sound-toggle" class="icon-btn" title="Toggle game sound effects">🔊</button>
+      <audio id="music-audio" loop preload="none"></audio>
+    </header>
+
+    <div class="teacher-grid">
+
+      <!-- LEFT: groups list -->
+      <aside class="panel groups-panel">
+        <h3>GROUPS <span id="group-count" class="badge">0</span></h3>
+        <ul id="groups-list" class="groups-list"></ul>
+      </aside>
+
+      <!-- CENTER: stage controls + live answers -->
+      <main class="panel stage-panel">
+        <div id="teacher-stage-info" class="stage-info">
+          <h3 id="teacher-stage-name">Waiting to start…</h3>
+          <div class="big-timer" id="teacher-timer">3:00</div>
+        </div>
+
+        <div class="teacher-controls">
+          <button id="btn-start-game" class="big-btn green">▶ START GAME</button>
+          <button id="btn-next-stage" class="big-btn yellow hidden">NEXT STAGE →</button>
+          <button id="btn-end-game" class="big-btn red hidden">END GAME</button>
+        </div>
+
+        <p class="teacher-hint">⭐ Click stars on an answer to override the score with your professional judgment.</p>
+        <div id="teacher-answers" class="teacher-answers"></div>
+      </main>
+
+      <!-- RIGHT: leaderboard -->
+      <aside class="panel leaderboard-panel">
+        <h3>🏆 LEADERBOARD</h3>
+        <ol id="leaderboard" class="leaderboard"></ol>
+      </aside>
+    </div>
+
+    <!-- Click-team detail overlay -->
+    <div id="team-detail-overlay" class="overlay hidden">
+      <div class="team-detail-card">
+        <div class="team-detail-header">
+          <h2 id="team-detail-name">Team</h2>
+          <button id="btn-close-team-detail" class="icon-btn" title="Back">←</button>
+        </div>
+        <div id="team-detail-meta" class="team-detail-meta"></div>
+        <div id="team-detail-body" class="team-detail-body"></div>
+        <button id="btn-back-from-team" class="big-btn pink">← BACK TO DASHBOARD</button>
+      </div>
+    </div>
+
+    <!-- Final boss overlay -->
+    <div id="final-boss-overlay" class="overlay hidden">
+      <div class="final-boss-card">
+        <h2>👑 FINAL BOSS ROUND</h2>
+        <p>Top groups face off! Mystery product:</p>
+        <div id="final-boss-product" class="final-boss-product">—</div>
+        <p>Each group has 60 seconds to type a winning pitch.</p>
+        <div id="final-boss-pitches"></div>
+        <button id="btn-start-vote" class="big-btn yellow hidden">START CLASS VOTE</button>
+        <button id="btn-reveal-winner" class="big-btn green hidden">REVEAL WINNER 🎉</button>
+        <div id="final-boss-winner" class="winner-banner hidden"></div>
+      </div>
+    </div>
+
+    <!-- End game / summary overlay -->
+    <div id="end-overlay" class="overlay hidden">
+      <div class="end-card">
+        <h2>🎉 GAME OVER</h2>
+        <p>Final standings:</p>
+        <ol id="final-standings" class="final-standings"></ol>
+        <div class="end-actions">
+          <button id="btn-print-summary" class="big-btn blue">🖨 PRINT GROUP SUMMARIES</button>
+          <button id="btn-new-game" class="big-btn pink">NEW GAME</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       STUDENT / GROUP VIEW
+       ============================================================ -->
+  <section id="view-group" class="view">
+    <header class="bar">
+      <h2 id="group-header-name">Group</h2>
+      <div class="group-product-mini">
+        Product: <span id="group-product-mini">—</span>
+      </div>
+      <div class="group-score-mini">
+        Score: <span id="group-score-mini">0</span>
+      </div>
+      <button id="btn-rubric" class="icon-btn" title="How am I being scored?">📋</button>
+    </header>
+
+    <main class="group-main">
+
+      <!-- Spin reveal (shown briefly on join) -->
+      <div id="group-spin" class="group-state">
+        <h2>Your product is…</h2>
+        <div class="slot-machine">
+          <div id="slot-window" class="slot-window">
+            <div id="slot-reel" class="slot-reel">
+              <div class="slot-item">—</div>
+            </div>
+          </div>
+        </div>
+        <p id="spin-status" class="spin-status">🎰 Spinning…</p>
+      </div>
+
+      <!-- Waiting state (after spin completes) -->
+      <div id="group-waiting" class="group-state hidden">
+        <h2>You're in! 🎉</h2>
+        <p>Your team product:</p>
+        <div class="product-card" id="group-product-big">—</div>
+        <p>Waiting for the teacher to start the game…</p>
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+      </div>
+
+      <!-- Playing state (per-stage) -->
+      <div id="group-playing" class="group-state hidden">
+        <div class="stage-header">
+          <h2 id="group-stage-name">Stage</h2>
+          <div class="timer-wrap">
+            <div class="stage-timer" id="group-timer">3:00</div>
+            <div id="frozen-badge" class="frozen-badge hidden">❄️ FROZEN</div>
+          </div>
+        </div>
+
+        <p class="stage-description" id="group-stage-description"></p>
+
+        <div id="answer-card-normal" class="answer-card">
+          <label>
+            Pricing strategy
+            <select id="answer-pricing">
+              <option value="">— choose —</option>
+            </select>
+          </label>
+
+          <label>
+            Promotion type
+            <select id="answer-promotion">
+              <option value="">— choose —</option>
+            </select>
+          </label>
+
+          <label>
+            <span class="box-title">Advantage of this <strong>pricing</strong> at this stage</span>
+            <div class="hint-chips" data-chips-for="pricing"></div>
+            <textarea id="answer-pricing-pc" maxlength="600" placeholder="What's good about this pricing for our product at this stage? Mention the product…"></textarea>
+            <span id="pricing-pc-counter" class="counter">0 / 600</span>
+          </label>
+
+          <label>
+            <span class="box-title">Advantage of this <strong>promotion</strong> at this stage</span>
+            <div class="hint-chips" data-chips-for="promotion"></div>
+            <textarea id="answer-promotion-pc" maxlength="600" placeholder="What's good about this promotion choice for our product? Mention the product…"></textarea>
+            <span id="promotion-pc-counter" class="counter">0 / 600</span>
+          </label>
+
+          <label>
+            <span class="box-title"><strong>Justification</strong> — explain (a) WHY these methods are beneficial for your product at this stage, AND (b) WHY they are better than other methods you could have chosen</span>
+            <div class="hint-chips" data-chips-for="justification"></div>
+            <textarea id="answer-comparison" maxlength="700" placeholder="Cover both: why your choices are beneficial AND why they beat alternatives (e.g. 'These are better than [other method] because…')"></textarea>
+            <span id="comparison-counter" class="counter">0 / 700</span>
+          </label>
+
+          <button id="btn-submit-answer" class="big-btn green">✓ SUBMIT</button>
+          <p id="submit-status" class="status"></p>
+          <div id="submit-breakdown" class="breakdown hidden"></div>
+        </div>
+
+        <div id="answer-card-extension" class="answer-card hidden">
+          <label>
+            Choose your extension strategy
+            <select id="answer-extension">
+              <option value="">— choose —</option>
+            </select>
+          </label>
+          <label>
+            Advantages of this strategy for your product
+            <textarea id="answer-advantages" maxlength="600" placeholder="Explain the advantages — mention the product, link your reasoning…"></textarea>
+            <span id="advantages-counter" class="counter">0 / 600</span>
+          </label>
+          <label>
+            Disadvantages of this strategy for your product
+            <textarea id="answer-disadvantages" maxlength="600" placeholder="What could go wrong? — mention the product, link your reasoning…"></textarea>
+            <span id="disadvantages-counter" class="counter">0 / 600</span>
+          </label>
+          <button id="btn-submit-extension" class="big-btn green">✓ SUBMIT EXTENSION</button>
+          <p id="submit-status-ext" class="status"></p>
+          <div id="submit-breakdown-ext" class="breakdown hidden"></div>
+        </div>
+
+        <!-- Power-ups -->
+        <div class="powerup-bar">
+          <h4>POWER-UPS</h4>
+          <div class="powerup-buttons">
+            <button class="powerup-btn" data-powerup="hint">
+              💡 Hint <small>30 pts</small>
+            </button>
+            <button class="powerup-btn" data-powerup="freeze">
+              ❄️ Freeze 30s <small>50 pts</small>
+            </button>
+            <button class="powerup-btn" data-powerup="sabotage">
+              💣 Sabotage <small>75 pts</small>
+            </button>
+            <button class="powerup-btn" data-powerup="example">
+              📖 Example <small>100 pts</small>
+            </button>
+          </div>
+          <div id="powerup-info" class="powerup-info"></div>
+        </div>
+      </div>
+
+      <!-- Final boss state -->
+      <div id="group-finalboss" class="group-state hidden">
+        <h2>👑 FINAL BOSS!</h2>
+        <p>You made the top groups! Pitch this mystery product:</p>
+        <div class="product-card" id="group-finalboss-product">—</div>
+        <textarea id="answer-pitch" maxlength="280" placeholder="Pitch it in 1-2 killer sentences…"></textarea>
+        <button id="btn-submit-pitch" class="big-btn green">✓ SUBMIT PITCH</button>
+        <div class="stage-timer" id="group-timer-final">1:00</div>
+      </div>
+
+      <!-- Voting state -->
+      <div id="group-voting" class="group-state hidden">
+        <h2>🗳 VOTE!</h2>
+        <p>Read the pitches and vote for the best one:</p>
+        <div id="vote-options" class="vote-options"></div>
+      </div>
+
+      <!-- Done state -->
+      <div id="group-done" class="group-state hidden">
+        <h2 id="group-done-headline">🎉 Great job!</h2>
+        <p id="group-done-message">Game over. Your final score:</p>
+        <div class="final-score" id="group-final-score">0</div>
+        <p id="group-final-rank" class="final-rank"></p>
+      </div>
+
+    </main>
+  </section>
+
+  <!-- ============================================================
+       RUBRIC MODAL (How am I scored?)
+       ============================================================ -->
+  <div id="rubric-modal" class="overlay hidden">
+    <div class="rubric-card">
+      <h2>📋 How you score points</h2>
+      <ul class="rubric-list">
+        <li><strong>Speed (max 30 pts)</strong> — small bonus for submitting earlier. Speed alone won't win.</li>
+        <li><strong>Mention your product</strong> — your answer <em>must</em> include the product name (or a synonym like "shoe" for "sneakers"). No mention = no quality points.</li>
+        <li><strong>Fill all three boxes (up to 30 pts)</strong> — 10 points per box that has real content.</li>
+        <li><strong>Use stage-specific language (up to 40 pts)</strong> — words like "awareness" in Introduction, "saturated" in Maturity, "extend" in Extension.</li>
+        <li><strong>Link your reasoning (up to 30 pts)</strong> — phrases like "<em>because</em>", "<em>therefore</em>", "<em>this means</em>", "<em>for example</em>". IGCSE wants chains of reasoning.</li>
+        <li><strong>Depth (up to 40 pts)</strong> — longer, more developed answers score higher. But waffle without business vocab doesn't.</li>
+        <li><strong>AI quality grade (up to 170 pts)</strong> — Claude marks your three answers like an IGCSE examiner. The strategy you picked is fine as long as your justification supports it.</li>
+        <li><strong>Teacher rating ⭐</strong> — your teacher can override the score with a 1–5 star rating based on real IGCSE quality.</li>
+      </ul>
+      <button id="btn-close-rubric" class="big-btn pink">CLOSE</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SABOTAGED FULL-SCREEN FLASH
+       ============================================================ -->
+  <div id="sabotage-flash" class="sabotage-flash hidden">
+    <div class="sabotage-flash-content">
+      <div class="sabotage-flash-icon">💣</div>
+      <h2>SABOTAGED!</h2>
+      <p id="sabotage-attacker">A rival group hit you</p>
+      <p>-30 seconds on your speed bonus</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PRINT-ONLY SUMMARY (filled in by JS, hidden on screen)
+       ============================================================ -->
+  <section id="print-summary" class="print-only"></section>
+
+  <!-- Toast notifications -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Firebase compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+  <!-- Game scripts -->
+  <script src="firebase-config.js"></script>
+  <script src="ai-config.js"></script>
+  <script src="products.js"></script>
+  <script src="training.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
