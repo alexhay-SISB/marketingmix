@@ -299,7 +299,7 @@ Mark on a 0–5 IGCSE scale. IGCSE specifically rewards BALANCED reasoning — t
 Penalise heavily if either advantages or disadvantages is blank or trivial.
 
 Respond ONLY with a JSON object, no markdown, no extra text:
-{"score": <0-5>, "feedback": "<two short sentences of specific, kind feedback — what they did well, plus one concrete improvement>"}`;
+{"score": <0-5>, "feedback": "<DETAILED IGCSE-style feedback paragraph (200–350 words). Quote specific phrases from the student's answer. Cover: (1) what they did well — with specific examples from their writing, (2) what is missing or weak — point to specific boxes/phrases, (3) at least 2–3 concrete, actionable suggestions for how to improve to the next band, (4) one short sample sentence showing how a key idea could be phrased at a higher band. Use plain language. Use line breaks (\\n) between sections so it's easy to read.>"}`;
     } else {
       const pricingLabel = labelFor(PRICING_STRATEGIES, pricing) || pricing;
       const promotionLabel = labelFor(PROMOTION_TYPES, promotion) || promotion;
@@ -355,7 +355,7 @@ Mark the WHOLE submission on a 0–5 IGCSE scale using this rubric:
 Penalise if any box is blank or trivial.
 
 Respond ONLY with a JSON object, no markdown, no extra text:
-{"score": <0-5>, "feedback": "<two short sentences of specific, kind feedback — what they did well, plus one concrete improvement>"}`;
+{"score": <0-5>, "feedback": "<DETAILED IGCSE-style feedback paragraph (200–350 words). Quote specific phrases from the student's answer. Cover: (1) what they did well — with specific examples from their writing, (2) what is missing or weak — point to specific boxes/phrases, (3) at least 2–3 concrete, actionable suggestions for how to improve to the next band, (4) one short sample sentence showing how a key idea could be phrased at a higher band. Use plain language. Use line breaks (\\n) between sections so it's easy to read.>"}`;
     }
 
     try {
@@ -369,7 +369,7 @@ Respond ONLY with a JSON object, no markdown, no extra text:
         },
         body: JSON.stringify({
           model: aiConfig.claudeModel || "claude-haiku-4-5-20251001",
-          max_tokens: 400,
+          max_tokens: 1200,
           messages: [{ role: "user", content: prompt }]
         })
       });
@@ -399,7 +399,7 @@ Respond ONLY with a JSON object, no markdown, no extra text:
       return {
         aiScore: score,
         aiQuality: aiQualityMap[score],
-        aiFeedback: String(parsed.feedback || "").slice(0, 500)
+        aiFeedback: String(parsed.feedback || "").slice(0, 3000)
       };
     } catch (err) {
       console.warn("Claude grading exception:", err);

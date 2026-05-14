@@ -398,7 +398,19 @@ body::before {
 }
 .answer-tile .a-ai-feedback strong { color: var(--blue); }
 .answer-tile .a-just { overflow-wrap: anywhere; white-space: normal; }
-.breakdown, .breakdown .b-feedback { overflow-wrap: anywhere; white-space: normal; }
+.breakdown, .breakdown .b-feedback {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;   /* preserve line breaks coming back from the AI */
+}
+.breakdown .b-feedback {
+  font-size: 14px;
+  line-height: 1.6;
+  max-height: none;
+  color: var(--text);
+}
+.answer-tile .a-ai-feedback {
+  white-space: pre-wrap;   /* same for the teacher-side feedback tile */
+}
 
 /* 5-star teacher override */
 .star-rating {
