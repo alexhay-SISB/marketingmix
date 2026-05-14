@@ -34,9 +34,28 @@
     console.error("Firebase init failed:", err);
   }
 
-  const aiReady = (typeof aiConfig !== "undefined") &&
-                  aiConfig.claudeApiKey &&
-                  !aiConfig.claudeApiKey.startsWith("PASTE");
+  // -------- API key handling (LOCAL TO THIS BROWSER, never uploaded) --------
+  // The key lives in localStorage only on the teacher's device. Students
+  // don't need it because grading is done by the teacher's browser.
+  const CLAUDE_KEY_STORAGE = "mm_claude_key";
+
+  function getClaudeKey() {
+    try {
+      const k = localStorage.getItem(CLAUDE_KEY_STORAGE);
+      if (k && k.startsWith("sk-ant-")) return k;
+    } catch (e) {}
+    // Backwards-compat fallback: if someone HAS put a key in the file, use it.
+    if (typeof aiConfig !== "undefined" && aiConfig.claudeApiKey &&
+        aiConfig.claudeApiKey.startsWith("sk-ant-")) return aiConfig.claudeApiKey;
+    return "";
+  }
+  function setClaudeKey(k) {
+    try { localStorage.setItem(CLAUDE_KEY_STORAGE, k); } catch (e) {}
+  }
+  function clearClaudeKey() {
+    try { localStorage.removeItem(CLAUDE_KEY_STORAGE); } catch (e) {}
+  }
+  function aiReady() { return !!getClaudeKey(); }
 
   function roomRef(code) { return db.ref("rooms/" + code); }
   function groupRef(code, gid) { return db.ref(`rooms/${code}/groups/${gid}`); }
@@ -248,7 +267,8 @@
 
   async function gradeWithClaude({ stageObj, pricing, promotion, pricingProsCons, promotionProsCons, comparison,
                                     productName, isExtension, strategy, advantages, disadvantages }) {
-    if (!aiReady) return null;
+    const key = getClaudeKey();
+    if (!key) return null;
 
     const principlesBlock = buildPrinciplesBlock();
     const exemplarsBlock  = buildExemplarsBlock();
@@ -343,7 +363,7 @@ Respond ONLY with a JSON object, no markdown, no extra text:
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": aiConfig.claudeApiKey,
+          "x-api-key": key,
           "anthropic-version": "2023-06-01",
           "anthropic-dangerous-direct-browser-access": "true"
         },
@@ -490,7 +510,54 @@ Respond ONLY with a JSON object, no markdown, no extra text:
     ensureAudio(); sfx.click();
     if (!firebaseReady) { alert("Firebase isn't configured. Open firebase-config.js."); return; }
     startHosting();
+    // Show / hide the key entry bar depending on whether the teacher has saved a key
+    refreshKeyEntryBar();
   });
+
+  // ---------- Claude API key entry handlers ----------
+  function refreshKeyEntryBar() {
+    const bar = document.getElementById("key-entry-bar");
+    const input = document.getElementById("input-claude-key");
+    const status = document.getElementById("key-entry-status");
+    const hasKey = !!getClaudeKey();
+    if (bar) bar.classList.remove("hidden");
+    if (input) input.value = hasKey ? "•••••••••••••••••••••••••" : "";
+    if (status) {
+      status.className = "key-entry-status " + (hasKey ? "success" : "");
+      status.textContent = hasKey
+        ? "✓ Key saved in this browser. AI grading is on."
+        : "No key saved — AI grading is off. Paste your sk-ant-… key and click SAVE.";
+    }
+  }
+  const saveBtn = document.getElementById("btn-save-claude-key");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", () => {
+      sfx.click();
+      const input = document.getElementById("input-claude-key");
+      const status = document.getElementById("key-entry-status");
+      const v = (input.value || "").trim();
+      if (!v.startsWith("sk-ant-")) {
+        status.className = "key-entry-status error";
+        status.textContent = "That doesn't look like a Claude key (should start with sk-ant-).";
+        return;
+      }
+      setClaudeKey(v);
+      refreshKeyEntryBar();
+      // If a room is already hosted, kick the queue
+      if (teacherRoomCode) {
+        roomRef(teacherRoomCode).once("value").then(snap => processGradingQueue(snap.val()));
+      }
+    });
+  }
+  const forgetBtn = document.getElementById("btn-clear-claude-key");
+  if (forgetBtn) {
+    forgetBtn.addEventListener("click", () => {
+      sfx.click();
+      if (!confirm("Forget the Claude key saved in this browser?")) return;
+      clearClaudeKey();
+      refreshKeyEntryBar();
+    });
+  }
   document.getElementById("btn-join").addEventListener("click", () => {
     ensureAudio(); sfx.click();
     document.getElementById("join-form").classList.toggle("hidden");
@@ -536,11 +603,124 @@ Respond ONLY with a JSON object, no markdown, no extra text:
       productsLeft: shuffle(PRODUCTS.map(p => p.name))
     };
     await roomRef(code).set(initialState);
-    roomRef(code).on("value", snap => renderTeacher(snap.val()));
+    roomRef(code).on("value", snap => {
+      const room = snap.val();
+      renderTeacher(room);
+      processGradingQueue(room);
+    });
     document.getElementById("teacher-room-code").textContent = code;
     showView("teacher");
     sfx.fanfare();
     toast(`Room ${code} created. Share the code with students!`, "success");
+  }
+
+  // ===== Teacher-side AI grading queue =====
+  // Watches the room for answers with pendingAi=true and grades them
+  // sequentially using the Claude API key stored in this teacher's
+  // localStorage. Students never call Claude themselves.
+  let isGrading = false;
+
+  async function processGradingQueue(room) {
+    if (!room || !teacherRoomCode) return;
+    if (isGrading) return;          // already working through the queue
+    if (!aiReady()) {
+      updateGradingQueueBar(0, "no-key");
+      return;
+    }
+
+    // Find all answers across all groups that need grading
+    const pending = [];
+    Object.entries(room.groups || {}).forEach(([gid, g]) => {
+      Object.entries(g.answers || {}).forEach(([stageKey, ans]) => {
+        if (ans && ans.pendingAi && (ans.aiAttempts || 0) < 3) {
+          pending.push({ gid, stageKey, ans, group: g });
+        }
+      });
+    });
+
+    updateGradingQueueBar(pending.length);
+    if (!pending.length) return;
+
+    isGrading = true;
+    try {
+      // Grade one at a time so we don't slam the API
+      for (const item of pending) {
+        // Refresh snapshot first to avoid clobbering teacher-star overrides
+        const fresh = await groupRef(teacherRoomCode, item.gid).once("value");
+        const g = fresh.val() || item.group;
+        const ans = (g.answers || {})[item.stageKey];
+        if (!ans || !ans.pendingAi) continue;
+
+        const stageObj = STAGES.find(s => s.key === item.stageKey);
+        if (!stageObj) continue;
+
+        // Mark attempt count
+        const attempts = (ans.aiAttempts || 0) + 1;
+        await groupRef(teacherRoomCode, item.gid).update({
+          [`answers/${item.stageKey}/aiAttempts`]: attempts
+        });
+
+        let aiResult;
+        if (stageObj.isExtension) {
+          aiResult = await gradeWithClaude({
+            stageObj, isExtension: true,
+            strategy: ans.strategy, advantages: ans.advantages, disadvantages: ans.disadvantages,
+            productName: g.product
+          });
+        } else {
+          aiResult = await gradeWithClaude({
+            stageObj, isExtension: false,
+            pricing: ans.pricing, promotion: ans.promotion,
+            pricingProsCons: ans.pricingProsCons,
+            promotionProsCons: ans.promotionProsCons,
+            comparison: ans.comparison,
+            productName: g.product
+          });
+        }
+
+        if (!aiResult) {
+          // Failed — leave for retry (up to 3 attempts), bail out of the loop
+          // so we don't burn through other answers on a broken key
+          break;
+        }
+
+        // Apply the grade. AI quality replaces rules quality.
+        const breakdown = { ...(ans.scoreBreakdown || {}) };
+        const prevQuality = breakdown.quality || 0;
+        const delta = aiResult.aiQuality - prevQuality;
+        breakdown.qualityOverridden = aiResult.aiQuality;
+        breakdown.total = (breakdown.total || 0) + delta;
+
+        await groupRef(teacherRoomCode, item.gid).update({
+          score: (g.score || 0) + delta,
+          [`answers/${item.stageKey}/scoreBreakdown`]: breakdown,
+          [`answers/${item.stageKey}/aiScore`]: aiResult.aiScore,
+          [`answers/${item.stageKey}/aiQuality`]: aiResult.aiQuality,
+          [`answers/${item.stageKey}/aiFeedback`]: aiResult.aiFeedback,
+          [`answers/${item.stageKey}/pendingAi`]: null
+        });
+      }
+    } finally {
+      isGrading = false;
+    }
+  }
+
+  function updateGradingQueueBar(pendingCount, mode) {
+    const bar = document.getElementById("grading-queue-bar");
+    if (!bar) return;
+    if (mode === "no-key") {
+      bar.classList.remove("hidden");
+      bar.classList.add("warn");
+      bar.innerHTML = "⚠️ AI grading paused — paste a Claude API key in the box above to start grading.";
+      return;
+    }
+    bar.classList.remove("warn");
+    if (pendingCount > 0) {
+      bar.classList.remove("hidden");
+      bar.innerHTML = `🤖 AI grading queue: <span id="grading-queue-count">${pendingCount}</span> pending`;
+    } else {
+      bar.classList.add("hidden");
+    }
   }
 
   function renderTeacher(room) {
@@ -1031,7 +1211,22 @@ Respond ONLY with a JSON object, no markdown, no extra text:
       const submitted = me.answers && me.answers[stage];
       lockStageUI(stageObj, submitted);
       // Render breakdown if there's a submission
-      if (submitted) renderBreakdownForStudent(stageObj, submitted);
+      if (submitted) {
+        renderBreakdownForStudent(stageObj, submitted);
+        // Update the inline status text once the AI grade arrives
+        const stat = stageObj.isExtension
+          ? document.getElementById("submit-status-ext")
+          : document.getElementById("submit-status");
+        if (stat) {
+          if (submitted.aiScore != null) {
+            stat.className = "status success";
+            stat.textContent = `Final: ${submitted.scoreBreakdown.total} pts (AI graded ${submitted.aiScore}/5)`;
+          } else if (submitted.pendingAi) {
+            stat.className = "status grading";
+            stat.textContent = `+${submitted.scoreBreakdown.total} pts (rules). Waiting for AI grade from teacher's device…`;
+          }
+        }
+      }
       startGroupTimer(room, me);
     } else if (state === "finalboss") {
       const isFinalist = (room.finalists || []).includes(groupId);
@@ -1224,57 +1419,25 @@ Respond ONLY with a JSON object, no markdown, no extra text:
       freezeUsed, sabotaged, productName: me.product
     });
 
-    // First save the rules score so the submit feels instant
+    // Save the rules score. The TEACHER's browser picks up `pendingAi: true`
+    // and grades with Claude using its locally-stored API key.
     await groupRef(groupRoomCode, groupId).update({
       score: (me.score || 0) + breakdown.total,
       [`answers/${stageKey}`]: {
         pricing, promotion,
         pricingProsCons, promotionProsCons, comparison,
         scoreBreakdown: breakdown,
-        submittedAt: Date.now()
+        submittedAt: Date.now(),
+        pendingAi: true,
+        aiAttempts: 0
       }
     });
 
-    stat.className = "status success";
-    stat.textContent = `+${breakdown.total} points (rules). Now grading with AI…`;
+    stat.className = "status grading";
+    stat.textContent = `+${breakdown.total} pts (rules). Waiting for AI grade from teacher's device…`;
     renderBreakdownForStudent(stageObj, { pricing, promotion, pricingProsCons, promotionProsCons, comparison, scoreBreakdown: breakdown });
     sfx.submit();
     if (breakdown.total >= 200) sfx.fanfare();
-
-    // AI grade (Claude — async, ~1-2s)
-    if (aiReady) {
-      stat.className = "status grading";
-      stat.textContent = "Grading with AI…";
-      const aiResult = await gradeWithClaude({
-        stageObj, pricing, promotion, pricingProsCons, promotionProsCons, comparison,
-        productName: me.product, isExtension: false
-      });
-      if (aiResult) {
-        const previousQuality = breakdown.quality;
-        const newQuality = aiResult.aiQuality;
-        const delta = newQuality - previousQuality;
-        const newTotal = breakdown.total + delta;
-        breakdown.qualityOverridden = newQuality;
-        breakdown.total = newTotal;
-        await groupRef(groupRoomCode, groupId).update({
-          score: (me.score || 0) + newTotal,
-          [`answers/${stageKey}/scoreBreakdown`]: breakdown,
-          [`answers/${stageKey}/aiScore`]: aiResult.aiScore,
-          [`answers/${stageKey}/aiQuality`]: aiResult.aiQuality,
-          [`answers/${stageKey}/aiFeedback`]: aiResult.aiFeedback
-        });
-        stat.className = "status success";
-        stat.textContent = `Final: ${newTotal} pts (AI graded ${aiResult.aiScore}/5)`;
-        renderBreakdownForStudent(stageObj, {
-          pricing, promotion, pricingProsCons, promotionProsCons, comparison,
-          scoreBreakdown: breakdown,
-          aiScore: aiResult.aiScore, aiFeedback: aiResult.aiFeedback
-        });
-      } else {
-        stat.className = "status warning";
-        stat.textContent = `+${breakdown.total} points (rules grading — AI was unavailable).`;
-      }
-    }
   });
 
   // Submit (extension — now requires both advantages and disadvantages)
@@ -1307,45 +1470,15 @@ Respond ONLY with a JSON object, no markdown, no extra text:
       [`answers/${stageObj.key}`]: {
         strategy, advantages, disadvantages,
         scoreBreakdown: breakdown,
-        submittedAt: Date.now()
+        submittedAt: Date.now(),
+        pendingAi: true,
+        aiAttempts: 0
       }
     });
-    stat.className = "status success";
-    stat.textContent = `+${breakdown.total} points (rules). Now grading with AI…`;
+    stat.className = "status grading";
+    stat.textContent = `+${breakdown.total} pts (rules). Waiting for AI grade from teacher's device…`;
     renderBreakdownForStudent(stageObj, { strategy, advantages, disadvantages, scoreBreakdown: breakdown });
     sfx.submit();
-
-    if (aiReady) {
-      stat.className = "status grading";
-      stat.textContent = "Grading with AI…";
-      const aiResult = await gradeWithClaude({
-        stageObj, isExtension: true, strategy, advantages, disadvantages, productName: me.product
-      });
-      if (aiResult) {
-        const previousQuality = breakdown.quality;
-        const newQuality = aiResult.aiQuality;
-        const delta = newQuality - previousQuality;
-        const newTotal = breakdown.total + delta;
-        breakdown.qualityOverridden = newQuality;
-        breakdown.total = newTotal;
-        await groupRef(groupRoomCode, groupId).update({
-          score: (me.score || 0) + newTotal,
-          [`answers/${stageObj.key}/scoreBreakdown`]: breakdown,
-          [`answers/${stageObj.key}/aiScore`]: aiResult.aiScore,
-          [`answers/${stageObj.key}/aiQuality`]: aiResult.aiQuality,
-          [`answers/${stageObj.key}/aiFeedback`]: aiResult.aiFeedback
-        });
-        stat.className = "status success";
-        stat.textContent = `Final: ${newTotal} pts (AI graded ${aiResult.aiScore}/5)`;
-        renderBreakdownForStudent(stageObj, {
-          strategy, advantages, disadvantages, scoreBreakdown: breakdown,
-          aiScore: aiResult.aiScore, aiFeedback: aiResult.aiFeedback
-        });
-      } else {
-        stat.className = "status warning";
-        stat.textContent = `+${breakdown.total} points (rules grading — AI was unavailable).`;
-      }
-    }
   });
 
   function renderBreakdownForStudent(stageObj, ans) {

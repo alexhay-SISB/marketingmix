@@ -183,6 +183,50 @@ body::before {
   width: 90px; cursor: pointer; accent-color: var(--pink);
 }
 
+/* Claude API key entry bar (teacher only) */
+.key-entry-bar {
+  margin: 16px 20px 0;
+  background: linear-gradient(135deg, rgba(255, 214, 10, 0.08), rgba(255, 46, 154, 0.08));
+  border: 2px solid var(--yellow);
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 0 30px rgba(255, 214, 10, 0.15);
+}
+.key-entry-content { display: flex; flex-direction: column; gap: 8px; }
+.key-entry-content strong { font-size: 16px; color: var(--yellow); }
+.key-entry-hint { font-size: 12px; color: var(--text-dim); }
+.key-entry-row { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.key-entry-row input {
+  flex: 1; min-width: 240px;
+  font-family: 'Poppins', monospace; font-size: 14px;
+  padding: 12px 14px; border-radius: 10px;
+  background: rgba(0,0,0,0.4); color: white;
+  border: 2px solid rgba(255,255,255,0.15);
+}
+.key-entry-row input:focus { outline: none; border-color: var(--yellow); }
+.key-entry-row .big-btn { padding: 12px 22px; font-size: 14px; }
+.key-entry-status { font-size: 13px; font-weight: 600; min-height: 1em; }
+.key-entry-status.success { color: var(--green); }
+.key-entry-status.error { color: var(--red); }
+
+/* AI grading queue indicator */
+.grading-queue-bar {
+  margin: 12px 20px 0;
+  background: rgba(0, 212, 255, 0.10);
+  border-left: 4px solid var(--blue);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--blue);
+}
+.grading-queue-bar.warn {
+  background: rgba(255, 59, 59, 0.10);
+  border-left-color: var(--red);
+  color: white;
+}
+.grading-queue-bar span { font-family: 'Bebas Neue'; font-size: 20px; margin: 0 4px; }
+
 /* Team-detail modal */
 .team-detail-card {
   background: var(--bg-card); border-radius: 20px;

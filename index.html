@@ -68,6 +68,23 @@
       <audio id="music-audio" loop preload="none"></audio>
     </header>
 
+    <!-- Claude API key entry (saved only in this browser's localStorage) -->
+    <section id="key-entry-bar" class="key-entry-bar hidden">
+      <div class="key-entry-content">
+        <strong>🔐 AI grading needs your Claude API key.</strong>
+        <span class="key-entry-hint">Saved only in this browser — never uploaded, never shared with students.</span>
+        <div class="key-entry-row">
+          <input type="password" id="input-claude-key" placeholder="sk-ant-api03-…" autocomplete="off" />
+          <button id="btn-save-claude-key" class="big-btn green">SAVE</button>
+          <button id="btn-clear-claude-key" class="big-btn red" title="Forget the saved key on this device">FORGET</button>
+        </div>
+        <p class="key-entry-status" id="key-entry-status"></p>
+      </div>
+    </section>
+
+    <!-- Grading queue indicator -->
+    <div id="grading-queue-bar" class="grading-queue-bar hidden"></div>
+
     <div class="teacher-grid">
 
       <!-- LEFT: groups list -->
