@@ -1216,6 +1216,9 @@ Respond ONLY with a JSON object, no markdown, no extra text:
         loadStageUI(stageObj, me);
         sfx.bonus();
       }
+      // Always refresh the student-name pills with the latest data from Firebase
+      // (covers the case where students arrive after the first stage render).
+      renderBoxStudents(stageObj, me);
       const submitted = me.answers && me.answers[stage];
       lockStageUI(stageObj, submitted);
       // Render breakdown if there's a submission
