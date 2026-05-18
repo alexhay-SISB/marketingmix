@@ -150,7 +150,7 @@ const STAGES = [
     description: "Product is new on the market. Sales are low, costs are high. Goal: build awareness.",
     suggestedPricing: ["penetration", "skimming"],
     suggestedPromotion: ["tv", "social", "influencer", "pr"],
-    durationMs: 240000
+    durationMs: 300000   // 5 min
   },
   {
     key: "growth",
@@ -158,7 +158,7 @@ const STAGES = [
     description: "Sales rising fast. Competitors enter the market. Goal: capture market share.",
     suggestedPricing: ["competitive", "psychological", "premium"],
     suggestedPromotion: ["social", "influencer", "sponsorship", "search"],
-    durationMs: 240000
+    durationMs: 300000   // 5 min
   },
   {
     key: "maturity",
@@ -166,14 +166,14 @@ const STAGES = [
     description: "Sales peak. Market is saturated. Goal: retain customers and differentiate.",
     suggestedPricing: ["competitive", "promotional", "loyalty"],
     suggestedPromotion: ["sales-promo", "loyalty", "in-store", "email"],
-    durationMs: 240000
+    durationMs: 300000   // 5 min
   },
   {
     key: "extension",                  // ⬅️ now part of the main lifecycle, sits between Maturity and Decline
     name: "EXTENSION",
     description: "Sales beginning to slow. Choose an extension strategy to keep the product alive.",
     isExtension: true,                 // ⬅️ flag so the UI shows the extension form
-    durationMs: 240000
+    durationMs: 300000   // 5 min
   },
   {
     key: "decline",
@@ -181,7 +181,7 @@ const STAGES = [
     description: "Sales fall. Either harvest the brand profitably or discontinue the product.",
     suggestedPricing: ["promotional", "loss-leader", "competitive"],
     suggestedPromotion: ["sales-promo", "in-store", "email"],
-    durationMs: 240000
+    durationMs: 300000   // 5 min
   }
 ];
 

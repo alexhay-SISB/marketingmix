@@ -567,9 +567,16 @@ Respond ONLY with a JSON object, no markdown, no extra text:
     if (!firebaseReady) { alert("Firebase isn't configured. Ask your teacher."); return; }
     const code = (document.getElementById("input-room-code").value || "").trim().toUpperCase();
     const name = (document.getElementById("input-group-name").value || "").trim();
+    const students = [
+      (document.getElementById("input-student-1").value || "").trim(),
+      (document.getElementById("input-student-2").value || "").trim(),
+      (document.getElementById("input-student-3").value || "").trim()
+    ].filter(n => n.length > 0).slice(0, 3);
+
     if (!code || code.length !== 4) return showJoinError("Room code must be 4 letters.");
     if (!name) return showJoinError("Enter a group name.");
-    joinRoom(code, name);
+    if (students.length === 0) return showJoinError("Enter at least one student name.");
+    joinRoom(code, name, students);
   });
   document.getElementById("input-room-code").addEventListener("input", e => { e.target.value = e.target.value.toUpperCase(); });
   function showJoinError(msg) {
@@ -1083,7 +1090,7 @@ Respond ONLY with a JSON object, no markdown, no extra text:
   let lastSeenStage = null;
   let lastSeenSabotageAt = 0;
 
-  async function joinRoom(code, name) {
+  async function joinRoom(code, name, students) {
     const snap = await roomRef(code).once("value");
     if (!snap.exists()) return showJoinError("Room not found.");
     const room = snap.val();
@@ -1099,6 +1106,7 @@ Respond ONLY with a JSON object, no markdown, no extra text:
 
     await groupRef(code, groupId).set({
       name, product, score: 0,
+      students: students || [],
       joinedAt: firebase.database.ServerValue.TIMESTAMP,
       answers: {}, powerUps: {}
     });
@@ -1314,6 +1322,29 @@ Respond ONLY with a JSON object, no markdown, no extra text:
     }
     document.getElementById("powerup-info").textContent = "";
     document.getElementById("powerup-info").className = "powerup-info";
+
+    // Show which student "owns" each box this round (rotates each stage)
+    renderBoxStudents(stageObj, me);
+  }
+
+  // Assigns one student per box using a rotation: student[(stageIdx + boxIdx) % count].
+  // Over 3 stages with 3 students this guarantees each student covers each box at least once.
+  function renderBoxStudents(stageObj, me) {
+    const students = (me && me.students && me.students.length) ? me.students : [];
+    const stageIdx = STAGES.findIndex(s => s.key === stageObj.key);
+    const prefix = stageObj.isExtension ? "box-student-ext-" : "box-student-";
+    for (let boxIdx = 0; boxIdx < 3; boxIdx++) {
+      const el = document.getElementById(prefix + boxIdx);
+      if (!el) continue;
+      if (students.length === 0) {
+        el.textContent = "(no name)";
+        el.classList.add("empty");
+      } else {
+        const name = students[(stageIdx + boxIdx) % students.length];
+        el.textContent = name;
+        el.classList.remove("empty");
+      }
+    }
   }
 
   function lockStageUI(stageObj, locked) {
@@ -1509,8 +1540,38 @@ Respond ONLY with a JSON object, no markdown, no extra text:
     }
     rows.push(`<li><strong>Total this stage</strong><span class="b-val"><strong>${b.total}</strong></span></li>`);
 
-    el.innerHTML = `<h5>Score breakdown</h5><ul>${rows.join("")}</ul>` +
-      ((ans.aiFeedback || b.feedback) ? `<div class="b-feedback">${escapeHtml(ans.aiFeedback || b.feedback)}</div>` : "");
+    const feedbackText = ans.aiFeedback || b.feedback || "";
+    let feedbackBlock = "";
+    if (feedbackText) {
+      feedbackBlock =
+        `<div class="b-feedback-wrap">` +
+          `<div class="b-feedback">${escapeHtml(feedbackText)}</div>` +
+          `<button type="button" class="copy-feedback-btn" data-copy-text="${escapeHtml(feedbackText)}">📋 Copy feedback</button>` +
+        `</div>`;
+    }
+    el.innerHTML = `<h5>Score breakdown</h5><ul>${rows.join("")}</ul>` + feedbackBlock;
+
+    // Wire up the copy button
+    const copyBtn = el.querySelector(".copy-feedback-btn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", async () => {
+        sfx.click();
+        try {
+          await navigator.clipboard.writeText(feedbackText);
+          copyBtn.textContent = "✓ Copied!";
+          toast("Feedback copied — paste it into your Google Doc.", "success");
+          setTimeout(() => { copyBtn.textContent = "📋 Copy feedback"; }, 2000);
+        } catch (err) {
+          // Fallback for older browsers / non-HTTPS
+          const ta = document.createElement("textarea");
+          ta.value = feedbackText;
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand("copy"); toast("Feedback copied!", "success"); }
+          catch (e) { toast("Copy failed — select the text and use Cmd+C", "error"); }
+          document.body.removeChild(ta);
+        }
+      });
+    }
   }
 
   function startGroupTimer(room, me) {

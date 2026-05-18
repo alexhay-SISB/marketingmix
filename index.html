@@ -33,6 +33,12 @@
       <div id="join-form" class="join-form hidden">
         <input id="input-room-code" type="text" maxlength="4" placeholder="ROOM CODE" autocomplete="off" />
         <input id="input-group-name" type="text" maxlength="20" placeholder="Your group name" autocomplete="off" />
+        <div class="student-names">
+          <p class="student-names-hint">Student names (1 required, up to 3):</p>
+          <input id="input-student-1" type="text" maxlength="20" placeholder="Student 1 name" autocomplete="off" />
+          <input id="input-student-2" type="text" maxlength="20" placeholder="Student 2 name (optional)" autocomplete="off" />
+          <input id="input-student-3" type="text" maxlength="20" placeholder="Student 3 name (optional)" autocomplete="off" />
+        </div>
         <button id="btn-join-room" class="big-btn yellow">JOIN GAME →</button>
         <p id="join-error" class="error hidden"></p>
       </div>
@@ -226,6 +232,7 @@
 
           <label>
             <span class="box-title">Advantage of this <strong>pricing</strong> at this stage</span>
+            <div class="box-student" id="box-student-0">—</div>
             <div class="hint-chips" data-chips-for="pricing"></div>
             <textarea id="answer-pricing-pc" maxlength="600" placeholder="What's good about this pricing for our product at this stage? Mention the product…"></textarea>
             <span id="pricing-pc-counter" class="counter">0 / 600</span>
@@ -233,6 +240,7 @@
 
           <label>
             <span class="box-title">Advantage of this <strong>promotion</strong> at this stage</span>
+            <div class="box-student" id="box-student-1">—</div>
             <div class="hint-chips" data-chips-for="promotion"></div>
             <textarea id="answer-promotion-pc" maxlength="600" placeholder="What's good about this promotion choice for our product? Mention the product…"></textarea>
             <span id="promotion-pc-counter" class="counter">0 / 600</span>
@@ -240,6 +248,7 @@
 
           <label>
             <span class="box-title"><strong>Justification</strong> — explain (a) WHY these methods are beneficial for your product at this stage, AND (b) WHY they are better than other methods you could have chosen</span>
+            <div class="box-student" id="box-student-2">—</div>
             <div class="hint-chips" data-chips-for="justification"></div>
             <textarea id="answer-comparison" maxlength="700" placeholder="Cover both: why your choices are beneficial AND why they beat alternatives (e.g. 'These are better than [other method] because…')"></textarea>
             <span id="comparison-counter" class="counter">0 / 700</span>
@@ -253,17 +262,20 @@
         <div id="answer-card-extension" class="answer-card hidden">
           <label>
             Choose your extension strategy
+            <div class="box-student" id="box-student-ext-0">—</div>
             <select id="answer-extension">
               <option value="">— choose —</option>
             </select>
           </label>
           <label>
             Advantages of this strategy for your product
+            <div class="box-student" id="box-student-ext-1">—</div>
             <textarea id="answer-advantages" maxlength="600" placeholder="Explain the advantages — mention the product, link your reasoning…"></textarea>
             <span id="advantages-counter" class="counter">0 / 600</span>
           </label>
           <label>
             Disadvantages of this strategy for your product
+            <div class="box-student" id="box-student-ext-2">—</div>
             <textarea id="answer-disadvantages" maxlength="600" placeholder="What could go wrong? — mention the product, link your reasoning…"></textarea>
             <span id="disadvantages-counter" class="counter">0 / 600</span>
           </label>

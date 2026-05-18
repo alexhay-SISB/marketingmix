@@ -133,6 +133,46 @@ body::before {
 }
 .join-form input:focus { outline: none; border-color: var(--yellow); box-shadow: 0 0 0 4px var(--yellow-glow); }
 #input-room-code { font-family: 'Bebas Neue'; font-size: 48px; letter-spacing: 12px; }
+
+.student-names {
+  display: flex; flex-direction: column; gap: 8px;
+  width: 100%; max-width: 320px;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 14px; border-radius: 12px;
+}
+.student-names-hint {
+  font-size: 12px; color: var(--text-dim);
+  text-align: left; margin: 0 4px 4px;
+  font-weight: 600;
+}
+.student-names input {
+  font-size: 16px; padding: 10px 14px;
+  letter-spacing: 0;
+}
+
+/* Student name tag shown above each input box during a round */
+.box-student {
+  display: inline-block;
+  align-self: flex-start;
+  background: linear-gradient(135deg, var(--pink), var(--purple));
+  color: white;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 6px 0 8px;
+  box-shadow: 0 2px 8px var(--pink-glow);
+  text-transform: none;
+}
+.box-student::before { content: "✏️ "; }
+.box-student.empty {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  box-shadow: none;
+}
+.box-student.empty::before { content: ""; }
 .error { color: var(--red); font-weight: 600; }
 .footer-note { margin-top: 48px; color: var(--text-dim); font-size: 14px; }
 
@@ -407,6 +447,26 @@ body::before {
   line-height: 1.6;
   max-height: none;
   color: var(--text);
+}
+
+.b-feedback-wrap { position: relative; margin-top: 10px; }
+.copy-feedback-btn {
+  margin-top: 10px;
+  background: rgba(0, 212, 255, 0.18);
+  color: var(--blue);
+  border: 1px solid var(--blue);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.copy-feedback-btn:hover {
+  background: var(--blue);
+  color: var(--bg-deep);
+  transform: translateY(-1px);
 }
 .answer-tile .a-ai-feedback {
   white-space: pre-wrap;   /* same for the teacher-side feedback tile */
